@@ -1,0 +1,7 @@
+{
+  "name": "Sistem Kasir Pintar (Smart POS)",
+  "description": "Aplikasi kasir lengkap dengan manajemen stok, tanggal kadaluarsa, diskon manual, dan berbagai metode pembayaran.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
