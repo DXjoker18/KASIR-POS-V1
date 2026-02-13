@@ -13,6 +13,7 @@ interface InventoryProps {
 const Inventory: React.FC<InventoryProps> = ({ products, onAdd, onUpdate, onDelete, canEdit }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
+  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
   const [currentProduct, setCurrentProduct] = useState<Partial<Product>>({
     name: '',
     sku: '',
@@ -60,6 +61,13 @@ const Inventory: React.FC<InventoryProps> = ({ products, onAdd, onUpdate, onDele
     setCurrentProduct(p);
     setIsEditing(true);
     setViewingProduct(null);
+  };
+
+  const confirmDelete = () => {
+    if (deletingProduct) {
+      onDelete(deletingProduct.id);
+      setDeletingProduct(null);
+    }
   };
 
   return (
@@ -163,7 +171,7 @@ const Inventory: React.FC<InventoryProps> = ({ products, onAdd, onUpdate, onDele
                     {canEdit && (
                       <>
                         <button onClick={() => handleEdit(p)} className="text-orange-500 hover:text-orange-700 font-black text-[10px] uppercase tracking-widest">Edit</button>
-                        <button onClick={() => onDelete(p.id)} className="text-red-500 hover:text-red-700 font-black text-[10px] uppercase tracking-widest">Hapus</button>
+                        <button onClick={() => setDeletingProduct(p)} className="text-red-500 hover:text-red-700 font-black text-[10px] uppercase tracking-widest">Hapus</button>
                       </>
                     )}
                   </td>
@@ -174,6 +182,7 @@ const Inventory: React.FC<InventoryProps> = ({ products, onAdd, onUpdate, onDele
         </div>
       </div>
 
+      {/* Detail Product Modal */}
       {viewingProduct && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-[2.5rem] w-full max-w-lg p-10 animate-in fade-in zoom-in duration-200 shadow-2xl relative overflow-hidden">
@@ -195,6 +204,33 @@ const Inventory: React.FC<InventoryProps> = ({ products, onAdd, onUpdate, onDele
               </div>
             </div>
             <button onClick={() => setViewingProduct(null)} className="w-full py-4 bg-gray-100 text-gray-600 rounded-2xl font-black text-sm uppercase tracking-widest transition-all hover:bg-gray-200">Tutup Detail</button>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Delete Modal */}
+      {deletingProduct && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-[2rem] w-full max-w-sm p-8 animate-in fade-in zoom-in duration-200 shadow-2xl text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">⚠️</div>
+            <h3 className="text-xl font-black text-gray-900 mb-2 uppercase">Hapus Barang?</h3>
+            <p className="text-sm text-gray-500 mb-8 leading-relaxed">
+              Yakin ingin menghapus barang <span className="font-bold text-gray-900">"{deletingProduct.name}"</span> ini secara permanen?
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <button 
+                onClick={confirmDelete}
+                className="py-3 bg-red-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-red-700 shadow-lg shadow-red-100 transition-all active:scale-95"
+              >
+                Hapus
+              </button>
+              <button 
+                onClick={() => setDeletingProduct(null)}
+                className="py-3 bg-gray-100 text-gray-500 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-gray-200 transition-all"
+              >
+                Batal
+              </button>
+            </div>
           </div>
         </div>
       )}

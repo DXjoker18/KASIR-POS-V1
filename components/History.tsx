@@ -27,6 +27,15 @@ const History: React.FC<HistoryProps> = ({ transactions, storeSettings }) => {
     setTimeout(() => window.print(), 500);
   };
 
+  const calculateTxProfit = (tx: Transaction) => {
+    const itemsProfit = tx.items.reduce((sum, item) => {
+      const revenue = (item.price * item.quantity) - (item.manualDiscount || 0);
+      const cost = (item.costPrice || 0) * item.quantity;
+      return sum + (revenue - cost);
+    }, 0);
+    return itemsProfit - (tx.globalDiscount || 0);
+  };
+
   const maskCardNumber = (num: string) => {
     if (!num) return '';
     const cleanNum = num.replace(/\s/g, '');
@@ -92,16 +101,29 @@ const History: React.FC<HistoryProps> = ({ transactions, storeSettings }) => {
             <div className="border-b border-dashed border-gray-300 mb-4"></div>
             <div className="space-y-3 mb-6">
               {selectedTx.items.map((item, idx) => (
-                <div key={idx} className="text-xs flex justify-between uppercase">
-                  <span>{item.name} x{item.quantity}</span>
-                  <span className="font-bold">Rp {((item.price * item.quantity) - item.manualDiscount).toLocaleString()}</span>
+                <div key={idx} className="text-xs flex flex-col uppercase">
+                  <div className="flex justify-between">
+                    <span>{item.name} x{item.quantity}</span>
+                    <span className="font-bold">Rp {((item.price * item.quantity) - item.manualDiscount).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-[8px] text-gray-400 italic">
+                    <span>HPP: Rp {(item.costPrice * item.quantity).toLocaleString()}</span>
+                    <span>Laba: Rp {((item.price * item.quantity) - item.manualDiscount - (item.costPrice * item.quantity)).toLocaleString()}</span>
+                  </div>
                 </div>
               ))}
             </div>
             <div className="border-b border-dashed border-gray-300 mb-4"></div>
             <div className="space-y-2 mb-8">
-              <div className="flex justify-between text-lg font-black text-blue-800"><span>TOTAL</span><span>Rp {selectedTx.totalAmount.toLocaleString()}</span></div>
-              <div className="flex justify-between text-[10px] text-gray-500 font-bold uppercase"><span>Pembayaran</span><span>{selectedTx.paymentMethod}</span></div>
+              <div className="flex justify-between text-lg font-black text-blue-800">
+                <span>TOTAL</span>
+                <span>Rp {selectedTx.totalAmount.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-xs font-bold text-green-600 bg-green-50 px-3 py-2 rounded-xl border border-green-100">
+                <span className="uppercase tracking-widest">Total Laba</span>
+                <span>Rp {calculateTxProfit(selectedTx).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-[10px] text-gray-500 font-bold uppercase mt-4"><span>Pembayaran</span><span>{selectedTx.paymentMethod}</span></div>
               {selectedTx.paymentMetadata?.referenceNumber && (
                 <div className="flex justify-between text-[10px] text-gray-500 font-bold uppercase"><span>No. Referensi</span><span className="font-mono">{selectedTx.paymentMetadata.referenceNumber}</span></div>
               )}
