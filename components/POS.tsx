@@ -48,19 +48,36 @@ const POS: React.FC<POSProps> = ({ products, cashierName, onCheckout, storeSetti
   const grandTotal = Math.max(0, subTotal - itemLevelDiscounts - globalDiscount);
   const changeAmount = Math.max(0, cashReceived - grandTotal);
 
+  // Formatting Card Number
+  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, '');
+    let formattedValue = '';
+    for (let i = 0; i < value.length; i++) {
+      if (i > 0 && i % 4 === 0) formattedValue += ' ';
+      formattedValue += value[i];
+    }
+    setCardNumber(formattedValue.substring(0, 19)); // Max 16 digits + 3 spaces
+  };
+
   // Validation Logic
   const isPaymentValid = useMemo(() => {
+    if (grandTotal <= 0) return false;
+
     if (paymentMethod === PaymentMethod.CASH) {
-      return cashReceived >= grandTotal && grandTotal > 0;
+      return cashReceived >= grandTotal;
     }
+    
     if (paymentMethod === PaymentMethod.DEBIT || paymentMethod === PaymentMethod.CREDIT_CARD) {
-      return bankName.trim().length > 0 && refNumber.trim().length > 0;
+      const isCardOk = cardNumber.trim() === '' || cardNumber.replace(/\D/g, '').length >= 13;
+      return bankName.trim().length > 0 && refNumber.trim().length > 0 && isCardOk;
     }
+    
     if (paymentMethod === PaymentMethod.QRIS || paymentMethod === PaymentMethod.E_WALLET) {
       return providerName.trim().length > 0 && refNumber.trim().length > 0;
     }
+    
     return false;
-  }, [paymentMethod, cashReceived, grandTotal, bankName, refNumber, providerName]);
+  }, [paymentMethod, cashReceived, grandTotal, bankName, refNumber, providerName, cardNumber]);
 
   useEffect(() => {
     if (isCheckingOut) {
@@ -299,7 +316,7 @@ const POS: React.FC<POSProps> = ({ products, cashierName, onCheckout, storeSetti
             <h3 className="text-2xl font-black mb-6 uppercase tracking-tight text-center">Metode Pembayaran</h3>
             <div className="grid grid-cols-2 gap-2 mb-6">
               {Object.values(PaymentMethod).map((method) => (
-                <button key={method} onClick={() => setPaymentMethod(method)} className={`p-4 rounded-xl border-2 font-black text-[10px] uppercase tracking-widest transition-all ${paymentMethod === method ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-100 text-gray-500 hover:border-blue-200'}`}>
+                <button key={method} onClick={() => setPaymentMethod(method)} className={`p-4 rounded-xl border-2 font-black text-[10px] uppercase tracking-widest transition-all ${paymentMethod === method ? 'bg-blue-600 border-blue-600 text-white shadow-lg' : 'bg-white border-gray-100 text-gray-500 hover:border-blue-200'}`}>
                   {method}
                 </button>
               ))}
@@ -316,12 +333,14 @@ const POS: React.FC<POSProps> = ({ products, cashierName, onCheckout, storeSetti
                  <div className="space-y-4">
                     <div className="flex justify-between items-center">
                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Uang Tunai Diterima</label>
-                       {cashReceived > 0 && cashReceived < grandTotal && <span className="text-[9px] font-black text-red-500 animate-pulse">UANG KURANG!</span>}
+                       {cashReceived > 0 && cashReceived < grandTotal && (
+                         <span className="text-[10px] font-black text-red-500 bg-red-50 px-2 py-0.5 rounded-lg border border-red-100 animate-pulse">UANG KURANG!</span>
+                       )}
                     </div>
                     <input 
                       autoFocus 
                       type="number" 
-                      className={`w-full text-3xl font-black p-4 rounded-xl border-2 bg-white focus:outline-none transition-all ${cashReceived > 0 && cashReceived < grandTotal ? 'border-red-400 text-red-600' : 'border-blue-100 text-gray-900 focus:border-blue-500'}`} 
+                      className={`w-full text-3xl font-black p-4 rounded-xl border-2 bg-white focus:outline-none transition-all ${cashReceived > 0 && cashReceived < grandTotal ? 'border-red-400 text-red-600 ring-2 ring-red-50' : 'border-blue-100 text-gray-900 focus:border-blue-500'}`} 
                       placeholder="0"
                       value={cashReceived || ''} 
                       onChange={(e) => setCashReceived(parseInt(e.target.value) || 0)} 
@@ -337,15 +356,24 @@ const POS: React.FC<POSProps> = ({ products, cashierName, onCheckout, storeSetti
                {(paymentMethod === PaymentMethod.DEBIT || paymentMethod === PaymentMethod.CREDIT_CARD) && (
                  <div className="space-y-4">
                    <div>
-                     <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Nama Bank <span className="text-red-500">*</span></label>
+                     <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest flex justify-between">
+                       <span>Nama Bank <span className="text-red-500">*</span></span>
+                       {bankName.trim() === '' && <span className="text-[8px] text-red-500">WAJIB DIISI</span>}
+                     </label>
                      <input type="text" className={`w-full p-3 bg-white border rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${bankName.trim() === '' ? 'border-red-200' : 'border-gray-200'}`} placeholder="BCA, Mandiri, BRI, dll" value={bankName} onChange={e => setBankName(e.target.value)} />
                    </div>
                    <div>
                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Nomor Kartu (Opsional)</label>
-                     <input type="text" className="w-full p-3 bg-white border border-gray-200 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="XXXX XXXX XXXX XXXX" value={cardNumber} onChange={e => setCardNumber(e.target.value)} />
+                     <input type="text" className="w-full p-3 bg-white border border-gray-200 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="XXXX XXXX XXXX XXXX" value={cardNumber} onChange={handleCardNumberChange} />
+                     {cardNumber.length > 0 && cardNumber.replace(/\D/g, '').length < 13 && (
+                       <p className="text-[8px] text-orange-500 font-bold mt-1">NOMOR KARTU KURANG PANJANG</p>
+                     )}
                    </div>
                    <div>
-                     <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Nomor Referensi (EDC) <span className="text-red-500">*</span></label>
+                     <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest flex justify-between">
+                       <span>Nomor Referensi (EDC) <span className="text-red-500">*</span></span>
+                       {refNumber.trim() === '' && <span className="text-[8px] text-red-500">WAJIB DIISI</span>}
+                     </label>
                      <input required type="text" className={`w-full p-3 bg-white border rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${refNumber.trim() === '' ? 'border-red-200' : 'border-gray-200'}`} placeholder="Masukkan No. Trace / Ref" value={refNumber} onChange={e => setRefNumber(e.target.value)} />
                    </div>
                  </div>
@@ -355,11 +383,17 @@ const POS: React.FC<POSProps> = ({ products, cashierName, onCheckout, storeSetti
                {(paymentMethod === PaymentMethod.QRIS || paymentMethod === PaymentMethod.E_WALLET) && (
                  <div className="space-y-4">
                    <div>
-                     <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Provider <span className="text-red-500">*</span></label>
+                     <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest flex justify-between">
+                       <span>Provider <span className="text-red-500">*</span></span>
+                       {providerName.trim() === '' && <span className="text-[8px] text-red-500">WAJIB DIISI</span>}
+                     </label>
                      <input type="text" className={`w-full p-3 bg-white border rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${providerName.trim() === '' ? 'border-red-200' : 'border-gray-200'}`} placeholder="GoPay, OVO, ShopeePay, dll" value={providerName} onChange={e => setProviderName(e.target.value)} />
                    </div>
                    <div>
-                     <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">ID Transaksi / Ref <span className="text-red-500">*</span></label>
+                     <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest flex justify-between">
+                       <span>ID Transaksi / Ref <span className="text-red-500">*</span></span>
+                       {refNumber.trim() === '' && <span className="text-[8px] text-red-500">WAJIB DIISI</span>}
+                     </label>
                      <input required type="text" className={`w-full p-3 bg-white border rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${refNumber.trim() === '' ? 'border-red-200' : 'border-gray-200'}`} placeholder="Masukkan No. Ref Transaksi" value={refNumber} onChange={e => setRefNumber(e.target.value)} />
                    </div>
                  </div>
@@ -370,9 +404,9 @@ const POS: React.FC<POSProps> = ({ products, cashierName, onCheckout, storeSetti
               <button 
                 onClick={confirmCheckout} 
                 disabled={!isPaymentValid}
-                className={`w-full py-5 rounded-2xl font-black text-lg text-white shadow-xl transform active:scale-95 transition-all ${isPaymentValid ? 'bg-green-500 hover:bg-green-600 shadow-green-100' : 'bg-gray-300 cursor-not-allowed shadow-none'}`}
+                className={`w-full py-5 rounded-2xl font-black text-lg text-white shadow-xl transform active:scale-95 transition-all ${isPaymentValid ? 'bg-green-500 hover:bg-green-600 shadow-green-100' : 'bg-gray-300 cursor-not-allowed shadow-none grayscale opacity-50'}`}
               >
-                Selesaikan Pembayaran
+                {isPaymentValid ? 'Selesaikan Pembayaran' : 'Lengkapi Pembayaran'}
               </button>
               <button onClick={() => setIsCheckingOut(false)} className="w-full py-4 text-gray-400 font-black text-[10px] uppercase tracking-[0.3em] hover:text-gray-600 transition-colors">Batalkan</button>
             </div>
