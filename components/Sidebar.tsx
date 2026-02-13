@@ -1,32 +1,48 @@
 
 import React from 'react';
-import { View, User, Role } from '../types';
+import { View, User, Role, StoreSettings } from '../types';
 
 interface SidebarProps {
   activeView: View;
   setView: (view: View) => void;
   user: User;
   onLogout: () => void;
+  storeSettings: StoreSettings;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, setView, user, onLogout }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeView, setView, user, onLogout, storeSettings }) => {
   const menuItems = [
     { id: 'DASHBOARD', label: 'Dashboard', icon: '📊', roles: [Role.OWNER, Role.ADMIN, Role.KARYAWAN] },
     { id: 'POS', label: 'Kasir (POS)', icon: '🛒', roles: [Role.OWNER, Role.ADMIN, Role.KARYAWAN] },
+    { id: 'ATTENDANCE', label: 'Daftar Hadir', icon: '⏰', roles: [Role.OWNER, Role.ADMIN, Role.KARYAWAN] },
     { id: 'INVENTORY', label: 'Stok Barang', icon: '📦', roles: [Role.OWNER, Role.ADMIN] },
     { id: 'HISTORY', label: 'Riwayat', icon: '📜', roles: [Role.OWNER, Role.ADMIN, Role.KARYAWAN] },
+    { id: 'RECEIPT_CONFIG', label: 'Desain Struk', icon: '🧾', roles: [Role.OWNER, Role.ADMIN] },
     { id: 'USERS', label: 'Staff & Akun', icon: '👥', roles: [Role.OWNER] },
   ];
 
   const filteredItems = menuItems.filter(item => item.roles.includes(user.role));
 
   return (
-    <aside className="w-20 md:w-64 bg-white border-r border-gray-200 flex flex-col h-screen sticky top-0">
+    <aside className="w-20 md:w-64 bg-white border-r border-gray-200 flex flex-col h-screen sticky top-0 z-40 no-print">
       <div className="p-6 border-b border-gray-100 hidden md:block">
-        <h1 className="text-xl font-black text-blue-600 tracking-tight">KASIR PINTAR</h1>
+        <div className="flex items-center gap-3">
+          {storeSettings.logo ? (
+            <img src={storeSettings.logo} alt="Logo" className="w-8 h-8 rounded-lg object-contain" />
+          ) : (
+            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 font-black">KP</div>
+          )}
+          <h1 className="text-sm font-black text-blue-600 tracking-tight leading-tight truncate uppercase">
+            {storeSettings.name}
+          </h1>
+        </div>
       </div>
       <div className="p-4 md:hidden text-center text-xl font-black text-blue-600">
-        KP
+        {storeSettings.logo ? (
+          <img src={storeSettings.logo} alt="Logo" className="w-10 h-10 rounded-lg object-contain mx-auto" />
+        ) : (
+          "KP"
+        )}
       </div>
       
       <div className="flex-1 mt-4 px-2 space-y-1">

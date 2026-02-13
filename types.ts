@@ -3,13 +3,25 @@ export interface Product {
   id: string;
   name: string;
   sku: string;
-  costPrice: number; // Harga Beli / Modal
-  price: number;     // Harga Jual
+  costPrice: number;
+  price: number;
   stock: number;
   arrivalDate: string;
   expiryDate: string;
   category: string;
-  defaultDiscountPercent: number; // Diskon default dalam persen (%)
+  defaultDiscountPercent: number;
+}
+
+export interface StoreSettings {
+  name: string;
+  address: string;
+  logo: string;
+  phone?: string;
+  website?: string;
+  receiptHeader?: string;
+  receiptFooter?: string;
+  showLogoOnReceipt?: boolean;
+  showBarcodeOnReceipt?: boolean;
 }
 
 export interface CartItem extends Product {
@@ -34,7 +46,7 @@ export enum Role {
 export interface User {
   id: string;
   username: string;
-  password: string; // Dalam produksi ini harus di-hash
+  password: string;
   role: Role;
   fullName: string;
   ktp: string;
@@ -42,16 +54,26 @@ export interface User {
   startDate: string;
   contractMonths: number;
   endDate: string;
+  photo?: string;
+}
+
+export interface Attendance {
+  id: string;
+  userId: string;
+  userName: string;
+  date: string;
+  checkIn: string;
+  checkOut?: string;
 }
 
 export interface Transaction {
   id: string;
   items: CartItem[];
   totalAmount: number;
-  globalDiscount: number; // Diskon tambahan di akhir total
+  globalDiscount: number;
   paymentMethod: PaymentMethod;
-  cashReceived?: number;  // Jumlah uang yang diterima (untuk Cash)
-  changeAmount?: number;  // Jumlah uang kembalian (untuk Cash)
+  cashReceived?: number;
+  changeAmount?: number;
   paymentMetadata?: {
     bankName?: string;
     cardNumber?: string;
@@ -59,7 +81,7 @@ export interface Transaction {
     providerName?: string;
   };
   timestamp: string;
-  cashierName: string; // Nama kasir yang memproses
+  cashierName: string;
 }
 
-export type View = 'DASHBOARD' | 'POS' | 'INVENTORY' | 'HISTORY' | 'USERS';
+export type View = 'DASHBOARD' | 'POS' | 'INVENTORY' | 'HISTORY' | 'USERS' | 'ATTENDANCE' | 'RECEIPT_CONFIG';

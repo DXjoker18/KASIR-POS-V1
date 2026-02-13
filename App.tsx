@@ -1,12 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { View, Product, Transaction, PaymentMethod, CartItem, User, Role } from './types';
+import { View, Product, Transaction, PaymentMethod, CartItem, User, Role, StoreSettings, Attendance as IAttendance } from './types';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import POS from './components/POS';
 import Inventory from './components/Inventory';
 import History from './components/History';
 import UserManagement from './components/UserManagement';
+import Attendance from './components/Attendance';
+import ReceiptDesigner from './components/ReceiptDesigner';
 import Login from './components/Login';
 
 const App: React.FC = () => {
@@ -15,8 +17,13 @@ const App: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [attendances, setAttendances] = useState<IAttendance[]>([]);
+  const [storeSettings, setStoreSettings] = useState<StoreSettings>({
+    name: 'KASIR PINTAR',
+    address: 'Jl. Contoh No. 123, Indonesia',
+    logo: ''
+  });
 
-  // Initialize with an Owner account if no users exist
   useEffect(() => {
     const savedUsers = localStorage.getItem('pos_users');
     if (!savedUsers) {
@@ -32,36 +39,52 @@ const App: React.FC = () => {
         contractMonths: 999,
         endDate: '2099-12-31'
       };
-      const initialUsers = [defaultOwner];
-      setUsers(initialUsers);
-      localStorage.setItem('pos_users', JSON.stringify(initialUsers));
+      setUsers([defaultOwner]);
     } else {
       setUsers(JSON.parse(savedUsers));
     }
 
     const savedProducts = localStorage.getItem('pos_products');
     const savedTransactions = localStorage.getItem('pos_transactions');
+    const savedSettings = localStorage.getItem('pos_settings');
+    const savedAttendances = localStorage.getItem('pos_attendances');
     
     if (savedProducts) setProducts(JSON.parse(savedProducts));
     if (savedTransactions) setTransactions(JSON.parse(savedTransactions));
+    if (savedSettings) setStoreSettings(JSON.parse(savedSettings));
+    if (savedAttendances) setAttendances(JSON.parse(savedAttendances));
 
-    // Check session
     const savedSession = sessionStorage.getItem('pos_current_user');
     if (savedSession) setCurrentUser(JSON.parse(savedSession));
   }, []);
 
-  // Sync to localStorage
-  useEffect(() => {
-    localStorage.setItem('pos_products', JSON.stringify(products));
-  }, [products]);
+  useEffect(() => localStorage.setItem('pos_products', JSON.stringify(products)), [products]);
+  useEffect(() => localStorage.setItem('pos_transactions', JSON.stringify(transactions)), [transactions]);
+  useEffect(() => localStorage.setItem('pos_users', JSON.stringify(users)), [users]);
+  useEffect(() => localStorage.setItem('pos_settings', JSON.stringify(storeSettings)), [storeSettings]);
+  useEffect(() => localStorage.setItem('pos_attendances', JSON.stringify(attendances)), [attendances]);
 
-  useEffect(() => {
-    localStorage.setItem('pos_transactions', JSON.stringify(transactions));
-  }, [transactions]);
+  const handleCheckIn = (userId: string) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    const newAttendance: IAttendance = {
+      id: `ATT-${Date.now()}`,
+      userId: userId,
+      userName: user.fullName,
+      date: new Date().toISOString().split('T')[0],
+      checkIn: new Date().toISOString()
+    };
+    setAttendances(prev => [newAttendance, ...prev]);
+  };
 
-  useEffect(() => {
-    localStorage.setItem('pos_users', JSON.stringify(users));
-  }, [users]);
+  const handleCheckOut = (userId: string) => {
+    const today = new Date().toISOString().split('T')[0];
+    setAttendances(prev => prev.map(a => 
+      (a.userId === userId && a.date === today && !a.checkOut) 
+      ? { ...a, checkOut: new Date().toISOString() } 
+      : a
+    ));
+  };
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
@@ -74,95 +97,51 @@ const App: React.FC = () => {
     sessionStorage.removeItem('pos_current_user');
   };
 
-  const addProduct = (product: Product) => {
-    setProducts(prev => [...prev, product]);
-  };
-
-  const updateProduct = (updatedProduct: Product) => {
-    setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
-  };
-
-  const deleteProduct = (id: string) => {
-    setProducts(prev => prev.filter(p => p.id !== id));
-  };
-
-  const processSale = (
-    cartItems: CartItem[], 
-    total: number, 
-    globalDiscount: number, 
-    method: PaymentMethod,
-    cashReceived?: number,
-    changeAmount?: number,
-    paymentMetadata?: Transaction['paymentMetadata']
-  ) => {
-    const newTransaction: Transaction = {
-      id: `TRX-${Date.now()}`,
-      items: cartItems,
-      totalAmount: total,
-      globalDiscount: globalDiscount,
-      paymentMethod: method,
-      cashReceived: cashReceived,
-      changeAmount: changeAmount,
-      paymentMetadata: paymentMetadata,
-      timestamp: new Date().toISOString(),
-      cashierName: currentUser?.fullName || 'Unknown'
-    };
-
-    setTransactions(prev => [newTransaction, ...prev]);
-
-    setProducts(prevProducts => {
-      return prevProducts.map(product => {
-        const cartItem = cartItems.find(item => item.id === product.id);
-        if (cartItem) {
-          return {
-            ...product,
-            stock: product.stock - cartItem.quantity
-          };
-        }
-        return product;
-      });
-    });
-  };
-
-  if (!currentUser) {
-    return <Login users={users} onLogin={handleLogin} />;
-  }
-
   const renderView = () => {
+    if (!currentUser) return null;
     switch (currentView) {
       case 'DASHBOARD':
-        return <Dashboard products={products} transactions={transactions} role={currentUser.role} />;
+        return <Dashboard products={products} transactions={transactions} role={currentUser.role} storeSettings={storeSettings} onUpdateSettings={setStoreSettings} />;
       case 'POS':
-        // Fix: Pass the cashierName prop to the POS component
-        return <POS products={products} cashierName={currentUser.fullName} onCheckout={processSale} />;
+        return <POS products={products} cashierName={currentUser.fullName} onCheckout={(cart, total, disc, method, cash, change, meta) => {
+          const newTx: Transaction = {
+            id: `TRX-${Date.now()}`,
+            items: cart,
+            totalAmount: total,
+            globalDiscount: disc,
+            paymentMethod: method,
+            cashReceived: cash,
+            changeAmount: change,
+            paymentMetadata: meta,
+            timestamp: new Date().toISOString(),
+            cashierName: currentUser.fullName
+          };
+          setTransactions(prev => [newTx, ...prev]);
+          setProducts(prev => prev.map(p => {
+            const item = cart.find(c => c.id === p.id);
+            return item ? { ...p, stock: p.stock - item.quantity } : p;
+          }));
+        }} storeSettings={storeSettings} />;
+      case 'ATTENDANCE':
+        return <Attendance users={users} attendances={attendances} onCheckIn={handleCheckIn} onCheckOut={handleCheckOut} />;
       case 'INVENTORY':
-        return (
-          <Inventory 
-            products={products} 
-            onAdd={addProduct} 
-            onUpdate={updateProduct} 
-            onDelete={deleteProduct} 
-            canEdit={currentUser.role !== Role.KARYAWAN}
-          />
-        );
+        return <Inventory products={products} onAdd={p => setProducts([...products, p])} onUpdate={up => setProducts(products.map(p => p.id === up.id ? up : p))} onDelete={id => setProducts(products.filter(p => p.id !== id))} canEdit={currentUser.role !== Role.KARYAWAN} />;
       case 'HISTORY':
-        return <History transactions={transactions} />;
+        return <History transactions={transactions} storeSettings={storeSettings} />;
+      case 'RECEIPT_CONFIG':
+        return <ReceiptDesigner settings={storeSettings} onUpdate={setStoreSettings} />;
       case 'USERS':
-        if (currentUser.role !== Role.OWNER) return <div className="p-8">Akses Ditolak</div>;
-        return <UserManagement users={users} onAddUser={(u) => setUsers([...users, u])} onDeleteUser={(id) => setUsers(users.filter(u => u.id !== id))} />;
+        return <UserManagement users={users} onAddUser={u => setUsers([...users, u])} onUpdateUser={up => setUsers(users.map(u => u.id === up.id ? up : u))} onDeleteUser={id => setUsers(users.filter(u => u.id !== id))} storeSettings={storeSettings} />;
       default:
-        return <Dashboard products={products} transactions={transactions} role={currentUser.role} />;
+        return null;
     }
   };
 
+  if (!currentUser) return <Login users={users} onLogin={handleLogin} />;
+
   return (
     <div className="flex min-h-screen bg-gray-100 text-gray-800">
-      <Sidebar 
-        activeView={currentView} 
-        setView={setCurrentView} 
-        user={currentUser} 
-        onLogout={handleLogout} 
-      />
+      <Sidebar activeView={currentView} setView={setCurrentView} user={currentUser} onLogout={handleLogout} storeSettings={storeSettings} />
       <main className="flex-1 p-4 md:p-8 overflow-y-auto h-screen">
         {renderView()}
       </main>
