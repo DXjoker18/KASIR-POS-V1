@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { View, Product, Transaction, User, Role, StoreSettings, Attendance as IAttendance, CashEntry, Customer, PrinterInfo } from './types';
+import { View, Product, Transaction, User, Role, StoreSettings, Attendance as IAttendance, CashEntry, Customer, PrinterInfo, EmployeeStatus } from './types';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import POS from './components/POS';
@@ -61,10 +61,13 @@ const App: React.FC = () => {
         role: Role.OWNER,
         fullName: 'Pemilik Toko',
         ktp: '1234567890123456',
+        phone: '08123456789',
         address: 'Kantor Utama',
         startDate: new Date().toISOString().split('T')[0],
         contractMonths: 99,
-        endDate: '2099-12-31'
+        endDate: '2099-12-31',
+        status: EmployeeStatus.PERMANENT,
+        basicSalary: 0
       };
       setUsers([defaultOwner]);
     } else {
@@ -162,7 +165,7 @@ const App: React.FC = () => {
       case 'CUSTOMERS':
         return <CustomerManagement customers={customers} onAdd={c => setCustomers([c, ...customers])} onUpdate={up => setCustomers(customers.map(c => c.id === up.id ? up : c))} onDelete={id => setCustomers(customers.filter(c => c.id !== id))} />;
       case 'FINANCE':
-        return <Finance cashEntries={cashEntries} onAddEntry={e => setCashEntries([e, ...cashEntries])} onDeleteEntry={id => setCashEntries(cashEntries.filter(e => e.id !== id))} currentUser={currentUser} />;
+        return <Finance cashEntries={cashEntries} transactions={transactions} storeSettings={storeSettings} onAddEntry={e => setCashEntries([e, ...cashEntries])} onDeleteEntry={id => setCashEntries(cashEntries.filter(e => e.id !== id))} currentUser={currentUser} />;
       case 'ATTENDANCE':
         return <Attendance users={users} attendances={attendances} onCheckIn={id => setAttendances([{ id: `ATT-${Date.now()}`, userId: id, userName: users.find(u => u.id === id)?.fullName || '', date: new Date().toISOString().split('T')[0], checkIn: new Date().toISOString() }, ...attendances])} onCheckOut={id => setAttendances(attendances.map(a => (a.userId === id && a.date === new Date().toISOString().split('T')[0] && !a.checkOut) ? { ...a, checkOut: new Date().toISOString() } : a))} />;
       case 'INVENTORY':

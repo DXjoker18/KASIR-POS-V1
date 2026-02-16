@@ -77,17 +77,36 @@ export enum Role {
   KARYAWAN = 'KARYAWAN'
 }
 
+export enum EmployeeStatus {
+  PERMANENT = 'TETAP',
+  CONTRACT = 'KONTRAK',
+  PROBATION = 'PROBATION',
+  RESIGNED = 'RESIGN'
+}
+
 export interface User {
   id: string;
   username: string;
   password: string;
   role: Role;
   fullName: string;
-  ktp: string;
+  ktp: string; // NIK
+  birthPlace?: string;
+  birthDate?: string;
+  gender?: 'Laki-laki' | 'Perempuan';
+  religion?: string;
+  education?: string;
+  phone: string;
+  email?: string;
   address: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
   startDate: string;
   contractMonths: number;
   endDate: string;
+  status: EmployeeStatus;
+  basicSalary: number;
+  allowance?: number;
   photo?: string;
 }
 
