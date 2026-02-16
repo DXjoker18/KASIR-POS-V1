@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { View, User, Role, StoreSettings } from '../types';
+import { View, User, Role, StoreSettings, PrinterInfo } from '../types';
 
 interface SidebarProps {
   activeView: View;
@@ -8,17 +8,21 @@ interface SidebarProps {
   user: User;
   onLogout: () => void;
   storeSettings: StoreSettings;
+  connectedPrinter: PrinterInfo | null;
+  onOpenPrinterManager: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, setView, user, onLogout, storeSettings }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeView, setView, user, onLogout, storeSettings, connectedPrinter, onOpenPrinterManager }) => {
   const menuItems = [
     { id: 'DASHBOARD', label: 'Dashboard', icon: '📊', roles: [Role.OWNER, Role.ADMIN, Role.KARYAWAN] },
     { id: 'POS', label: 'Kasir (POS)', icon: '🛒', roles: [Role.OWNER, Role.ADMIN, Role.KARYAWAN] },
+    { id: 'CUSTOMERS', label: 'Pelanggan', icon: '💎', roles: [Role.OWNER, Role.ADMIN, Role.KARYAWAN] },
+    { id: 'FINANCE', label: 'Keuangan', icon: '💰', roles: [Role.OWNER, Role.ADMIN] },
     { id: 'ATTENDANCE', label: 'Daftar Hadir', icon: '⏰', roles: [Role.OWNER, Role.ADMIN, Role.KARYAWAN] },
     { id: 'INVENTORY', label: 'Stok Barang', icon: '📦', roles: [Role.OWNER, Role.ADMIN] },
     { id: 'HISTORY', label: 'Riwayat', icon: '📜', roles: [Role.OWNER, Role.ADMIN, Role.KARYAWAN] },
-    { id: 'RECEIPT_CONFIG', label: 'Desain Struk', icon: '🧾', roles: [Role.OWNER, Role.ADMIN] },
     { id: 'USERS', label: 'Staff & Akun', icon: '👥', roles: [Role.OWNER] },
+    { id: 'SETTINGS', label: 'Pengaturan', icon: '⚙️', roles: [Role.OWNER] },
   ];
 
   const filteredItems = menuItems.filter(item => item.roles.includes(user.role));
@@ -37,15 +41,22 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setView, user, onLogout, 
           </h1>
         </div>
       </div>
-      <div className="p-4 md:hidden text-center text-xl font-black text-blue-600">
-        {storeSettings.logo ? (
-          <img src={storeSettings.logo} alt="Logo" className="w-10 h-10 rounded-lg object-contain mx-auto" />
-        ) : (
-          "KP"
-        )}
-      </div>
       
-      <div className="flex-1 mt-4 px-2 space-y-1">
+      {/* Printer Status Mini Tab */}
+      <button 
+        onClick={onOpenPrinterManager}
+        className="mx-3 mt-4 p-3 bg-gray-50 border border-gray-100 rounded-2xl flex items-center gap-3 hover:bg-gray-100 transition-all group"
+      >
+        <div className={`w-2 h-2 rounded-full ${connectedPrinter ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-400'}`}></div>
+        <div className="hidden md:block text-left overflow-hidden">
+          <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Printer System</p>
+          <p className="text-[10px] font-bold text-gray-700 truncate">
+            {connectedPrinter ? connectedPrinter.name : 'Disconnected'}
+          </p>
+        </div>
+      </button>
+
+      <div className="flex-1 mt-4 px-2 space-y-1 overflow-y-auto custom-scrollbar">
         {filteredItems.map((item) => (
           <button
             key={item.id}

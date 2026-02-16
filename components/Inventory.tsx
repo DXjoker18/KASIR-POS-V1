@@ -14,6 +14,8 @@ const Inventory: React.FC<InventoryProps> = ({ products, onAdd, onUpdate, onDele
   const [isEditing, setIsEditing] = useState(false);
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [quickAdjProduct, setQuickAdjProduct] = useState<Product | null>(null);
+  const [adjAmount, setAdjAmount] = useState<number>(0);
   const [currentProduct, setCurrentProduct] = useState<Partial<Product>>({
     name: '',
     sku: '',
@@ -40,6 +42,24 @@ const Inventory: React.FC<InventoryProps> = ({ products, onAdd, onUpdate, onDele
       });
     }
     resetForm();
+  };
+
+  const handleQuickAdjustment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickAdjProduct) return;
+
+    const newStock = quickAdjProduct.stock + adjAmount;
+    if (newStock < 0) {
+      alert("Stok tidak boleh kurang dari 0!");
+      return;
+    }
+
+    onUpdate({
+      ...quickAdjProduct,
+      stock: newStock
+    });
+    setQuickAdjProduct(null);
+    setAdjAmount(0);
   };
 
   const resetForm = () => {
@@ -71,10 +91,10 @@ const Inventory: React.FC<InventoryProps> = ({ products, onAdd, onUpdate, onDele
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-left">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-black">Inventaris Barang</h2>
+          <h2 className="text-2xl font-black text-gray-900">Inventaris Barang</h2>
           <p className="text-sm text-gray-400 font-medium">Manajemen stok dan harga barang toko.</p>
         </div>
         {!isEditing && canEdit && (
@@ -89,7 +109,7 @@ const Inventory: React.FC<InventoryProps> = ({ products, onAdd, onUpdate, onDele
 
       {isEditing && (
         <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 animate-in fade-in slide-in-from-top-4 duration-300">
-          <h3 className="text-lg font-black mb-6 uppercase tracking-tight">{currentProduct.id ? 'Edit Barang' : 'Input Barang Baru'}</h3>
+          <h3 className="text-lg font-black mb-6 uppercase tracking-tight text-left">{currentProduct.id ? 'Edit Barang' : 'Input Barang Baru'}</h3>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="space-y-2 md:col-span-2">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Nama Barang</label>
@@ -106,27 +126,27 @@ const Inventory: React.FC<InventoryProps> = ({ products, onAdd, onUpdate, onDele
                 {categories.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 text-left">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest text-blue-600">Harga Beli</label>
               <input required type="number" className="w-full p-3 bg-blue-50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold" value={currentProduct.costPrice || ''} onChange={e => setCurrentProduct({...currentProduct, costPrice: parseInt(e.target.value) || 0})} />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 text-left">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest text-green-600">Harga Jual</label>
               <input required type="number" className="w-full p-3 bg-green-50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold" value={currentProduct.price || ''} onChange={e => setCurrentProduct({...currentProduct, price: parseInt(e.target.value) || 0})} />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 text-left">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest text-red-500">Diskon (%)</label>
               <input type="number" max="100" min="0" className="w-full p-3 bg-red-50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold" value={currentProduct.defaultDiscountPercent || ''} onChange={e => setCurrentProduct({...currentProduct, defaultDiscountPercent: parseInt(e.target.value) || 0})} />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 text-left">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Stok</label>
               <input required type="number" className="w-full p-3 bg-gray-50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold" value={currentProduct.stock || ''} onChange={e => setCurrentProduct({...currentProduct, stock: parseInt(e.target.value) || 0})} />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 text-left">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tgl Datang</label>
               <input required type="date" className="w-full p-3 bg-gray-50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold" value={currentProduct.arrivalDate} onChange={e => setCurrentProduct({...currentProduct, arrivalDate: e.target.value})} />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 text-left">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tgl Kadaluarsa</label>
               <input type="date" className="w-full p-3 bg-gray-50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold" value={currentProduct.expiryDate} onChange={e => setCurrentProduct({...currentProduct, expiryDate: e.target.value})} />
             </div>
@@ -154,8 +174,8 @@ const Inventory: React.FC<InventoryProps> = ({ products, onAdd, onUpdate, onDele
               {products.map((p) => (
                 <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="p-6">
-                    <button onClick={() => setViewingProduct(p)} className="text-left">
-                      <p className="font-bold text-sm text-gray-800">{p.name}</p>
+                    <button onClick={() => setViewingProduct(p)} className="text-left group">
+                      <p className="font-bold text-sm text-gray-800 group-hover:text-blue-600 transition-colors">{p.name}</p>
                       <p className="text-[10px] text-gray-400 font-mono">SKU: {p.sku}</p>
                     </button>
                   </td>
@@ -163,74 +183,110 @@ const Inventory: React.FC<InventoryProps> = ({ products, onAdd, onUpdate, onDele
                     <span className="text-[10px] bg-gray-100 px-2 py-1 rounded-full text-gray-600 font-black uppercase">{p.category}</span>
                   </td>
                   <td className="p-6">
-                    <span className={`font-black text-sm ${p.stock <= 5 ? 'text-red-500' : 'text-gray-800'}`}>{p.stock}</span>
+                    <div className="flex items-center gap-2">
+                       <span className={`font-black text-sm ${p.stock <= 5 ? 'text-red-500' : 'text-gray-800'}`}>{p.stock}</span>
+                       {canEdit && (
+                         <button 
+                           onClick={() => {
+                             setQuickAdjProduct(p);
+                             setAdjAmount(0);
+                           }} 
+                           className="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all text-[10px]"
+                           title="Update Stok Cepat"
+                         >
+                           ➕
+                         </button>
+                       )}
+                    </div>
                   </td>
                   <td className="p-6 font-black text-sm text-blue-600">Rp {p.price.toLocaleString()}</td>
-                  <td className="p-6 space-x-4">
-                    <button onClick={() => setViewingProduct(p)} className="text-blue-500 hover:text-blue-700 font-black text-[10px] uppercase tracking-widest">Detail</button>
-                    {canEdit && (
-                      <>
-                        <button onClick={() => handleEdit(p)} className="text-orange-500 hover:text-orange-700 font-black text-[10px] uppercase tracking-widest">Edit</button>
-                        <button onClick={() => setDeletingProduct(p)} className="text-red-500 hover:text-red-700 font-black text-[10px] uppercase tracking-widest">Hapus</button>
-                      </>
-                    )}
+                  <td className="p-6">
+                    <div className="flex items-center gap-4">
+                      <button onClick={() => setViewingProduct(p)} className="text-blue-500 hover:text-blue-700 font-black text-[10px] uppercase tracking-widest transition-colors">Detail</button>
+                      {canEdit && (
+                        <>
+                          <button onClick={() => {
+                            setQuickAdjProduct(p);
+                            setAdjAmount(0);
+                          }} className="text-green-500 hover:text-green-700 font-black text-[10px] uppercase tracking-widest transition-colors">Stok</button>
+                          <button onClick={() => handleEdit(p)} className="text-orange-500 hover:text-orange-700 font-black text-[10px] uppercase tracking-widest transition-colors">Edit</button>
+                          <button onClick={() => setDeletingProduct(p)} className="text-red-500 hover:text-red-700 font-black text-[10px] uppercase tracking-widest transition-colors">Hapus</button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
+              {products.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="p-20 text-center text-gray-300 font-bold italic uppercase tracking-widest text-xs">Belum ada barang di inventaris</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Detail Product Modal */}
-      {viewingProduct && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-[2.5rem] w-full max-w-lg p-10 animate-in fade-in zoom-in duration-200 shadow-2xl relative overflow-hidden">
-            <button onClick={() => setViewingProduct(null)} className="absolute top-8 right-8 text-gray-400 hover:text-gray-600">✕</button>
-            <div className="mb-8">
-              <span className="bg-blue-100 text-blue-600 text-[9px] px-3 py-1 rounded-full font-black uppercase tracking-widest">Info Produk</span>
-              <h3 className="text-2xl font-black text-gray-900 mt-2">{viewingProduct.name}</h3>
-              <p className="text-xs font-mono text-gray-400">SKU: {viewingProduct.sku}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-8 mb-8">
-              <div className="space-y-4">
-                <div><label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Kategori</label><p className="font-bold text-gray-800">{viewingProduct.category}</p></div>
-                <div><label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Harga Beli</label><p className="font-bold text-blue-600">Rp {viewingProduct.costPrice.toLocaleString()}</p></div>
-                <div><label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Harga Jual</label><p className="font-bold text-green-600">Rp {viewingProduct.price.toLocaleString()}</p></div>
-              </div>
-              <div className="space-y-4">
-                <div><label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Stok Saat Ini</label><p className="font-black text-xl">{viewingProduct.stock} Unit</p></div>
-                <div><label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Kadaluarsa</label><p className="font-bold text-red-500">{viewingProduct.expiryDate || '-'}</p></div>
-              </div>
-            </div>
-            <button onClick={() => setViewingProduct(null)} className="w-full py-4 bg-gray-100 text-gray-600 rounded-2xl font-black text-sm uppercase tracking-widest transition-all hover:bg-gray-200">Tutup Detail</button>
-          </div>
-        </div>
-      )}
-
-      {/* Confirmation Delete Modal */}
+      {/* Confirmation Delete Modal (Inventory) */}
       {deletingProduct && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-          <div className="bg-white rounded-[2rem] w-full max-w-sm p-8 animate-in fade-in zoom-in duration-200 shadow-2xl text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">⚠️</div>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[110] p-4 text-gray-800">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-sm p-10 animate-in fade-in zoom-in duration-200 shadow-2xl text-center">
+            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">⚠️</div>
             <h3 className="text-xl font-black text-gray-900 mb-2 uppercase">Hapus Barang?</h3>
             <p className="text-sm text-gray-500 mb-8 leading-relaxed">
-              Yakin ingin menghapus barang <span className="font-bold text-gray-900">"{deletingProduct.name}"</span> ini secara permanen?
+              Anda akan menghapus barang <span className="font-bold text-gray-900">"{deletingProduct.name}"</span> secara permanen. Pastikan tidak ada stok tersisa sebelum melakukan penghapusan.
             </p>
             <div className="grid grid-cols-2 gap-3">
               <button 
                 onClick={confirmDelete}
-                className="py-3 bg-red-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-red-700 shadow-lg shadow-red-100 transition-all active:scale-95"
+                className="py-4 bg-red-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-red-700 shadow-xl shadow-red-100 transition-all active:scale-95"
               >
                 Hapus
               </button>
               <button 
                 onClick={() => setDeletingProduct(null)}
-                className="py-3 bg-gray-100 text-gray-500 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-gray-200 transition-all"
+                className="py-4 bg-gray-100 text-gray-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-200 transition-all"
               >
                 Batal
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Other Modals (Keep Existing) */}
+      {quickAdjProduct && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[110] p-4">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-sm p-10 animate-in fade-in zoom-in duration-300 shadow-2xl text-gray-800">
+            <h3 className="text-lg font-black mb-1 uppercase tracking-tight text-center">Update Stok Cepat</h3>
+            <p className="text-xs text-center text-gray-400 font-bold mb-6 uppercase tracking-widest">{quickAdjProduct.name}</p>
+            <form onSubmit={handleQuickAdjustment} className="space-y-6 text-center">
+              <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100">
+                <div className="flex justify-between items-center mb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest px-2">
+                  <span>Stok Saat Ini</span>
+                  <span>Stok Akhir</span>
+                </div>
+                <div className="flex justify-between items-center px-2">
+                  <span className="text-2xl font-black text-gray-400">{quickAdjProduct.stock}</span>
+                  <span className="text-4xl text-blue-100">→</span>
+                  <span className={`text-2xl font-black ${quickAdjProduct.stock + adjAmount < 0 ? 'text-red-500' : 'text-blue-600'}`}>
+                    {quickAdjProduct.stock + adjAmount}
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Jumlah Perubahan (+/-)</label>
+                <div className="flex items-center gap-3">
+                  <button type="button" onClick={() => setAdjAmount(prev => prev - 1)} className="w-12 h-12 rounded-xl bg-gray-100 text-gray-600 font-black text-xl hover:bg-gray-200 transition-all active:scale-90">-</button>
+                  <input autoFocus type="number" className="flex-1 p-4 bg-blue-50 border-2 border-transparent focus:border-blue-500 rounded-2xl focus:outline-none font-black text-center text-xl" value={adjAmount} onChange={(e) => setAdjAmount(parseInt(e.target.value) || 0)} />
+                  <button type="button" onClick={() => setAdjAmount(prev => prev + 1)} className="w-12 h-12 rounded-xl bg-blue-600 text-white font-black text-xl hover:bg-blue-700 transition-all active:scale-90">+</button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <button type="submit" className="py-4 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all active:scale-95">Simpan</button>
+                <button type="button" onClick={() => setQuickAdjProduct(null)} className="py-4 bg-gray-100 text-gray-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-200 transition-all">Batal</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
