@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { View, Product, Transaction, User, Role, StoreSettings, Attendance as IAttendance, CashEntry, Customer, PrinterInfo, EmployeeStatus } from './types';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -181,13 +182,19 @@ const App: React.FC = () => {
     }
   };
 
-  if (!currentUser) return <Login users={users} onLogin={user => { setCurrentUser(user); sessionStorage.setItem('pos_current_user', JSON.stringify(user)); setCurrentView(user.role === Role.KARYAWAN ? 'POS' : 'DASHBOARD'); }} />;
+  if (!currentUser) return (
+    <>
+      <Login users={users} onLogin={user => { setCurrentUser(user); sessionStorage.setItem('pos_current_user', JSON.stringify(user)); setCurrentView(user.role === Role.KARYAWAN ? 'POS' : 'DASHBOARD'); }} />
+      <SpeedInsights />
+    </>
+  );
 
   return (
     <div className="flex min-h-screen bg-gray-100 text-gray-800">
       <Sidebar activeView={currentView} setView={setCurrentView} user={currentUser} onLogout={() => { setCurrentUser(null); sessionStorage.removeItem('pos_current_user'); }} storeSettings={storeSettings} connectedPrinter={connectedPrinter} onOpenPrinterManager={() => setIsPrinterModalOpen(true)} />
       <main className="flex-1 p-4 md:p-8 overflow-y-auto h-screen">{renderView()}</main>
       <PrinterManager isOpen={isPrinterModalOpen} onClose={() => setIsPrinterModalOpen(false)} connectedPrinter={connectedPrinter} onConnect={p => { setConnectedPrinter(p); setIsPrinterModalOpen(false); }} onDisconnect={() => setConnectedPrinter(null)} />
+      <SpeedInsights />
     </div>
   );
 };
