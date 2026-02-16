@@ -54,6 +54,17 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onAddUser, onUpd
     return d.toISOString().split('T')[0];
   };
 
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, photo: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const finalUser = {
@@ -87,11 +98,38 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onAddUser, onUpd
     }, 500);
   };
 
+  const getContractStatus = (endDate: string) => {
+    const today = new Date();
+    const expiry = new Date(endDate);
+    const diffTime = expiry.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 3600 * 24));
+
+    if (diffDays < 0) return { label: 'Kontrak Habis', color: 'text-red-500 bg-red-50' };
+    if (diffDays <= 30) return { label: `${diffDays} Hari Lagi`, color: 'text-orange-500 bg-orange-50' };
+    return { label: 'Aktif', color: 'text-green-600 bg-green-50' };
+  };
+
   const renderFormContent = () => {
     switch (activeTab) {
       case 'PRIBADI':
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-300">
+            <div className="md:col-span-2 flex flex-col items-center mb-4">
+              <div className="w-32 h-32 bg-gray-100 rounded-[2.5rem] border-2 border-dashed border-gray-300 overflow-hidden flex items-center justify-center relative group">
+                {formData.photo ? (
+                  <img src={formData.photo} alt="Staff" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-4xl opacity-20">👤</span>
+                )}
+                <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+                  <span className="text-[10px] font-black text-white uppercase tracking-widest">Ganti Foto</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                </label>
+              </div>
+              {formData.photo && (
+                <button type="button" onClick={() => setFormData({...formData, photo: ''})} className="mt-2 text-[10px] font-black text-red-400 uppercase">Hapus Foto</button>
+              )}
+            </div>
             <div className="space-y-1">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Nama Lengkap Sesuai KTP</label>
               <input required className="w-full p-4 bg-gray-50 rounded-2xl font-bold" value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} />
@@ -156,6 +194,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onAddUser, onUpd
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Durasi Kontrak (Bulan)</label>
               <input type="number" className="w-full p-4 bg-gray-50 rounded-2xl font-bold" value={formData.contractMonths} onChange={e => setFormData({...formData, contractMonths: parseInt(e.target.value) || 0})} />
             </div>
+            <div className="md:col-span-2 bg-blue-600 p-6 rounded-[2rem] text-white">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Estimasi Gaji Bersih (THP)</span>
+                <span className="text-2xl font-black">{storeSettings.currencySymbol} {((formData.basicSalary || 0) + (formData.allowance || 0)).toLocaleString()}</span>
+              </div>
+            </div>
           </div>
         );
       case 'KONTAK':
@@ -191,7 +235,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onAddUser, onUpd
                 <input required className="w-full p-4 bg-gray-900 text-white rounded-2xl font-bold" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} />
              </div>
              <div className="space-y-1">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Password Baru</label>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Password Baru / Tetap</label>
                 <input required type="password" className="w-full p-4 bg-gray-900 text-white rounded-2xl font-bold" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
              </div>
              <div className="md:col-span-2 p-6 bg-blue-50 border border-blue-100 rounded-3xl">
@@ -253,31 +297,36 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onAddUser, onUpd
 
       {/* User Grid List */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 no-print">
-        {users.map(u => (
-          <div key={u.id} className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden flex flex-col group transition-all hover:shadow-xl hover:border-blue-100">
-            <div className="p-8 flex items-start gap-5">
-              <div className="w-16 h-16 bg-gray-50 rounded-2xl flex-shrink-0 border border-gray-100 overflow-hidden">
-                {u.photo ? <img src={u.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-2xl opacity-20">👤</div>}
-              </div>
-              <div className="flex-1 text-left">
-                <h4 className="font-black text-sm uppercase tracking-tight text-gray-900 group-hover:text-blue-600 transition-colors">{u.fullName}</h4>
-                <div className="flex gap-2 mt-1">
-                  <span className="text-[8px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase">{u.role}</span>
-                  <span className="text-[8px] font-black text-gray-400 bg-gray-100 px-2 py-0.5 rounded uppercase">{u.status}</span>
+        {users.map(u => {
+          const contractStatus = getContractStatus(u.endDate);
+          return (
+            <div key={u.id} className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden flex flex-col group transition-all hover:shadow-xl hover:border-blue-100">
+              <div className="p-8 flex items-start gap-5">
+                <div className="w-16 h-16 bg-gray-50 rounded-2xl flex-shrink-0 border border-gray-100 overflow-hidden">
+                  {u.photo ? <img src={u.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-2xl opacity-20">👤</div>}
                 </div>
-                <p className="text-[9px] text-gray-400 font-bold mt-2">NIK: {u.ktp}</p>
-                <p className="text-[10px] font-black text-blue-600 mt-2">{storeSettings.currencySymbol} {u.basicSalary.toLocaleString()}</p>
+                <div className="flex-1 text-left">
+                  <h4 className="font-black text-sm uppercase tracking-tight text-gray-900 group-hover:text-blue-600 transition-colors">{u.fullName}</h4>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    <span className="text-[8px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase">{u.role}</span>
+                    <span className={`text-[8px] font-black px-2 py-0.5 rounded uppercase ${contractStatus.color}`}>{contractStatus.label}</span>
+                  </div>
+                  <p className="text-[9px] text-gray-400 font-bold mt-2">NIK: {u.ktp}</p>
+                  <p className="text-[10px] font-black text-blue-600 mt-2">{storeSettings.currencySymbol} {((u.basicSalary || 0) + (u.allowance || 0)).toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="px-8 pb-8 pt-0 grid grid-cols-2 gap-2 mt-auto">
+                <button onClick={() => handleEdit(u)} className="py-3 bg-gray-50 text-gray-700 rounded-xl font-black text-[9px] uppercase hover:bg-blue-600 hover:text-white transition-all">Edit Profil</button>
+                <button onClick={() => setPreviewUser(u)} className="py-3 bg-gray-50 text-gray-700 rounded-xl font-black text-[9px] uppercase hover:bg-green-600 hover:text-white transition-all">Cetak ID</button>
+                {u.id !== 'user-owner' ? (
+                  <button onClick={() => { if(confirm(`Hapus staff "${u.fullName}" secara permanen?`)) onDeleteUser(u.id)}} className="col-span-2 py-2 text-red-300 font-black text-[8px] uppercase hover:text-red-500 transition-colors">Hapus Data Staff</button>
+                ) : (
+                  <button disabled className="col-span-2 py-2 text-gray-300 font-black text-[8px] uppercase cursor-not-allowed">Akun Sistem Utama (Owner)</button>
+                )}
               </div>
             </div>
-            <div className="px-8 pb-8 pt-0 grid grid-cols-2 gap-2 mt-auto">
-               <button onClick={() => handleEdit(u)} className="py-3 bg-gray-50 text-gray-700 rounded-xl font-black text-[9px] uppercase hover:bg-blue-600 hover:text-white transition-all">Edit Profil</button>
-               <button onClick={() => setPreviewUser(u)} className="py-3 bg-gray-50 text-gray-700 rounded-xl font-black text-[9px] uppercase hover:bg-green-600 hover:text-white transition-all">Cetak ID</button>
-               {u.role !== Role.OWNER && (
-                 <button onClick={() => { if(confirm('Hapus staff ini secara permanen?')) onDeleteUser(u.id)}} className="col-span-2 py-2 text-red-300 font-black text-[8px] uppercase hover:text-red-500 transition-colors">Hapus Data Staff</button>
-               )}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* ID Card Preview Modal */}
@@ -286,7 +335,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onAddUser, onUpd
            <div className="bg-white rounded-[3rem] p-12 shadow-2xl flex flex-col items-center max-w-lg w-full">
               <div className="mb-8">
                 <h3 className="text-2xl font-black uppercase tracking-tight text-gray-900">Pratinjau Kartu Staff</h3>
-                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-2">Pastikan seluruh informasi sudah benar</p>
+                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-2">Pastikan foto dan NIK sudah benar</p>
               </div>
 
               <div className="scale-110 md:scale-125 transition-transform duration-500 my-10 relative">
