@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { StoreSettings, ReceiptTemplate, Role, CardCustomization } from '../types';
+import { StoreSettings, ReceiptTemplate, Role, CardCustomization, EmployeeStatus } from '../types';
 import IDCard from './IDCard';
 
 interface SettingsProps {
@@ -197,7 +197,8 @@ const Settings: React.FC<SettingsProps> = ({ settings, onUpdate, onExportData, o
               </div>
               <div className="flex flex-col items-center justify-center scale-90">
                 <p className="text-[8px] font-black text-gray-300 uppercase tracking-[0.4em] mb-4 text-center">Preview Kartu</p>
-                <IDCard user={{ id: 'ID-12345678', fullName: 'REZA ADITAMA', role: Role.ADMIN, ktp: '320123456789', address: 'Kota Bogor', startDate: '2023-01-01', contractMonths: 12, endDate: '2024-01-01', username: '', password: '' }} settings={formData} />
+                {/* Fix: Add missing required properties 'phone', 'status', and 'basicSalary' to the user object */}
+                <IDCard user={{ id: 'ID-12345678', fullName: 'REZA ADITAMA', role: Role.ADMIN, ktp: '320123456789', phone: '08123456789', address: 'Kota Bogor', startDate: '2023-01-01', contractMonths: 12, endDate: '2024-01-01', status: EmployeeStatus.CONTRACT, basicSalary: 0, username: '', password: '' }} settings={formData} />
               </div>
             </div>
           )}

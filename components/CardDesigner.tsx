@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { StoreSettings, CardCustomization, User, Role } from '../types';
+import { StoreSettings, CardCustomization, User, Role, EmployeeStatus } from '../types';
 import IDCard from './IDCard';
 
 interface CardDesignerProps {
@@ -30,6 +30,7 @@ const CardDesigner: React.FC<CardDesignerProps> = ({ settings, onUpdate }) => {
   const [previewId, setPreviewId] = useState('USER-12345');
   const [previewName, setPreviewName] = useState('REZA ADITAMA');
 
+  // Fix: Add missing required properties 'phone', 'status', and 'basicSalary' to sampleUser
   const sampleUser: User = useMemo(() => ({
     id: previewId,
     fullName: previewName,
@@ -37,10 +38,13 @@ const CardDesigner: React.FC<CardDesignerProps> = ({ settings, onUpdate }) => {
     username: 'sample',
     password: '',
     ktp: '1234567890',
+    phone: '08123456789',
     address: 'Jl. Contoh No. 123',
     startDate: '2023-01-01',
     contractMonths: 12,
     endDate: '2024-01-01',
+    status: EmployeeStatus.CONTRACT,
+    basicSalary: 0,
     photo: ''
   }), [previewId, previewName]);
 
