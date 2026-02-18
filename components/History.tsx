@@ -174,7 +174,8 @@ const History: React.FC<HistoryProps> = ({
       </div>
 
       {/* Tampilan Khusus Cetak & PDF Generator */}
-      <div className="print-only" style={{ webkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+      {/* Fix: PascalCase for vendor-prefixed CSS property WebkitPrintColorAdjust */}
+      <div className="print-only" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
         {selectedTx && (
           <div ref={printRef} className="bg-white text-black leading-tight">
             {printFormat === 'RECEIPT' ? (

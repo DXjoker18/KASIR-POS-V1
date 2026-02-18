@@ -176,11 +176,11 @@ const Inventory: React.FC<InventoryProps> = ({ products, onAdd, onUpdate, onDele
             </div>
             <div className="space-y-2 text-left">
               <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest ml-1">Harga Modal (Rp)</label>
-              <input required type="number" className="w-full p-4 bg-blue-50 border-2 border-transparent focus:border-blue-500 rounded-2xl focus:outline-none font-black transition-all" value={currentProduct.costPrice || ''} onChange={e => setCurrentProduct({...currentProduct, costPrice: parseInt(e.target.value) || 0})} />
+              <input required type="number" min="0" className="w-full p-4 bg-blue-50 border-2 border-transparent focus:border-blue-500 rounded-2xl focus:outline-none font-black transition-all" value={currentProduct.costPrice || ''} onChange={e => setCurrentProduct({...currentProduct, costPrice: parseInt(e.target.value) || 0})} />
             </div>
             <div className="space-y-2 text-left">
               <label className="text-[10px] font-black text-green-600 uppercase tracking-widest ml-1">Harga Jual (Rp)</label>
-              <input required type="number" className="w-full p-4 bg-green-50 border-2 border-transparent focus:border-blue-500 rounded-2xl focus:outline-none font-black transition-all" value={currentProduct.price || ''} onChange={e => setCurrentProduct({...currentProduct, price: parseInt(e.target.value) || 0})} />
+              <input required type="number" min="0" className="w-full p-4 bg-green-50 border-2 border-transparent focus:border-blue-500 rounded-2xl focus:outline-none font-black transition-all" value={currentProduct.price || ''} onChange={e => setCurrentProduct({...currentProduct, price: parseInt(e.target.value) || 0})} />
             </div>
             <div className="space-y-2 text-left">
               <label className="text-[10px] font-black text-red-500 uppercase tracking-widest ml-1">Diskon Produk (%)</label>
@@ -188,7 +188,7 @@ const Inventory: React.FC<InventoryProps> = ({ products, onAdd, onUpdate, onDele
             </div>
             <div className="space-y-2 text-left">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Jumlah Stok Awal</label>
-              <input required type="number" className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 rounded-2xl focus:outline-none font-black transition-all" value={currentProduct.stock || ''} onChange={e => setCurrentProduct({...currentProduct, stock: parseInt(e.target.value) || 0})} />
+              <input required type="number" min="0" className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 rounded-2xl focus:outline-none font-black transition-all" value={currentProduct.stock || ''} onChange={e => setCurrentProduct({...currentProduct, stock: parseInt(e.target.value) || 0})} />
             </div>
             <div className="space-y-2 text-left">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Tanggal Masuk</label>
