@@ -20,6 +20,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onAddUser, onUpd
   const [printUser, setPrintUser] = useState<User | null>(null);
   const [previewUser, setPreviewUser] = useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const initialFormState: User = {
     id: '',
@@ -257,7 +258,22 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onAddUser, onUpd
              </div>
              <div className="space-y-1">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Password Sistem</label>
-                <input required type="password" className="w-full p-4 bg-gray-900 text-white rounded-2xl font-bold border-none transition-all" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
+                <div className="relative">
+                  <input 
+                    required 
+                    type={showPassword ? "text" : "password"} 
+                    className="w-full p-4 bg-gray-900 text-white rounded-2xl font-bold border-none transition-all pr-12" 
+                    value={formData.password} 
+                    onChange={e => setFormData({...formData, password: e.target.value})} 
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-400 transition-colors"
+                  >
+                    {showPassword ? "👁️" : "🙈"}
+                  </button>
+                </div>
              </div>
              <div className="md:col-span-2 p-6 bg-amber-50 border border-amber-100 rounded-3xl">
                 <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-2 flex items-center gap-2">⚠️ Keamanan Data</p>

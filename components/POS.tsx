@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Product, PaymentMethod, CartItem, Transaction, StoreSettings, Customer } from '../types';
+import { Html5QrcodeScanner } from 'html5-qrcode';
 
 interface POSProps {
   products: Product[];
@@ -33,6 +34,7 @@ const POS: React.FC<POSProps> = ({ products, customers, cashierName, onCheckout,
   const [cashReceived, setCashReceived] = useState<number>(0);
   const [lastTransaction, setLastTransaction] = useState<Transaction | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   
   // State Pelanggan
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -72,6 +74,40 @@ const POS: React.FC<POSProps> = ({ products, customers, cashierName, onCheckout,
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Barcode Scanner Effect
+  useEffect(() => {
+    if (isScannerOpen) {
+      const scanner = new Html5QrcodeScanner(
+        "reader",
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        /* verbose= */ false
+      );
+
+      scanner.render((decodedText) => {
+        const product = products.find(p => p.sku === decodedText);
+        if (product) {
+          addToCart(product);
+          setIsScannerOpen(false);
+          scanner.clear();
+        } else {
+          // Check if it's a customer card
+          const customer = customers.find(c => c.cardNumber === decodedText);
+          if (customer) {
+            selectCustomer(customer);
+            setIsScannerOpen(false);
+            scanner.clear();
+          }
+        }
+      }, (error) => {
+        // console.warn(error);
+      });
+
+      return () => {
+        scanner.clear().catch(err => console.error("Failed to clear scanner", err));
+      };
+    }
+  }, [isScannerOpen, products, customers]);
 
   const addToCart = (product: Product) => {
     if (product.stock <= 0) { alert("Stok habis!"); return; }
@@ -175,12 +211,19 @@ const POS: React.FC<POSProps> = ({ products, customers, cashierName, onCheckout,
                 ref={searchInputRef}
                 type="text"
                 placeholder="Cari Produk, Scan Barcode, atau Cari Nama/HP Member..."
-                className="w-full pl-10 pr-4 py-3 bg-gray-50 rounded-2xl border-none focus:ring-0 text-sm font-bold text-gray-800"
+                className="w-full pl-10 pr-12 py-3 bg-gray-50 rounded-2xl border-none focus:ring-0 text-sm font-bold text-gray-800"
                 value={unifiedSearch}
                 onFocus={() => setIsSearchFocused(true)}
                 onChange={(e) => setUnifiedSearch(e.target.value)}
               />
               <span className="absolute left-3.5 top-3.5 text-gray-400">🔍</span>
+              <button 
+                onClick={() => setIsScannerOpen(true)}
+                className="absolute right-3 top-2.5 p-1.5 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+                title="Scan Barcode"
+              >
+                📷
+              </button>
             </div>
             {selectedCustomer ? (
               <div className="flex items-center gap-2 bg-blue-600 text-white pl-4 pr-2 py-2 rounded-2xl shadow-lg shadow-blue-100">
@@ -474,6 +517,22 @@ const POS: React.FC<POSProps> = ({ products, customers, cashierName, onCheckout,
           </div>
         )}
       </div>
+
+      {/* MODAL SCANNER BARCODE */}
+      {isScannerOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[200] p-4 text-left">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl overflow-hidden animate-in zoom-in duration-200">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-black uppercase tracking-tight">Scan Barcode</h3>
+              <button onClick={() => setIsScannerOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors">✕</button>
+            </div>
+            <div id="reader" className="w-full rounded-2xl overflow-hidden border-4 border-blue-50"></div>
+            <div className="mt-6 text-center">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Arahkan barcode produk ke kamera</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

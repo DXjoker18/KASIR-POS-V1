@@ -10,6 +10,7 @@ interface LoginProps {
 const Login: React.FC<LoginProps> = ({ users, onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
 
   const handleLogin = (e: React.FormEvent) => {
@@ -48,14 +49,23 @@ const Login: React.FC<LoginProps> = ({ users, onLogin }) => {
 
           <div className="space-y-2">
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Password</label>
-            <input
-              required
-              type="password"
-              className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl focus:outline-none transition-all font-bold"
-              placeholder="Masukkan password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <div className="relative">
+              <input
+                required
+                type={showPassword ? "text" : "password"}
+                className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl focus:outline-none transition-all font-bold pr-12"
+                placeholder="Masukkan password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 transition-colors"
+              >
+                {showPassword ? "👁️" : "🙈"}
+              </button>
+            </div>
           </div>
 
           {error && (
