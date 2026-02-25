@@ -1,6 +1,10 @@
 
 import React, { useState, useMemo } from 'react';
 import { CashEntry, CashType, User, Transaction, StoreSettings } from '../types';
+import { 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend, BarChart, Bar
+} from 'recharts';
 
 interface FinanceProps {
   cashEntries: CashEntry[];
@@ -13,10 +17,12 @@ interface FinanceProps {
 
 type FinanceTab = 'MUTASI' | 'LABA_RUGI';
 type TimeFrame = 'Harian' | 'Mingguan' | 'Bulanan';
+type ViewMode = 'TABLE' | 'CHART';
 
 const Finance: React.FC<FinanceProps> = ({ cashEntries, transactions, storeSettings, onAddEntry, onDeleteEntry, currentUser }) => {
   const [activeTab, setActiveTab] = useState<FinanceTab>('MUTASI');
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('Harian');
+  const [viewMode, setViewMode] = useState<ViewMode>('CHART');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formData, setFormData] = useState({
     type: CashType.OUT,
@@ -24,6 +30,8 @@ const Finance: React.FC<FinanceProps> = ({ cashEntries, transactions, storeSetti
     amount: 0,
     note: ''
   });
+
+  const COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
 
   const categories = {
     [CashType.OUT]: ['Listrik & Air', 'Sewa Tempat', 'Gaji Staff', 'Maintenance', 'Pajak', 'Beli Perlengkapan', 'Lainnya'],
@@ -60,6 +68,39 @@ const Finance: React.FC<FinanceProps> = ({ cashEntries, transactions, storeSetti
 
     return { totalSales, totalHPP, grossProfit, otherIncome, operationalExpenses, netProfit };
   }, [filteredTransactions, filteredCashEntries]);
+
+  // Chart Data Aggregation
+  const chartData = useMemo(() => {
+    const dailyMap: { [key: string]: { date: string, in: number, out: number } } = {};
+    
+    // Process Transactions (Sales)
+    filteredTransactions.forEach(tx => {
+      const date = new Date(tx.timestamp).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+      if (!dailyMap[date]) dailyMap[date] = { date, in: 0, out: 0 };
+      dailyMap[date].in += (tx.totalAmount - (tx.taxAmount || 0));
+    });
+
+    // Process Cash Entries
+    filteredCashEntries.forEach(ce => {
+      const date = new Date(ce.timestamp).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+      if (!dailyMap[date]) dailyMap[date] = { date, in: 0, out: 0 };
+      if (ce.type === CashType.IN) dailyMap[date].in += ce.amount;
+      else dailyMap[date].out += ce.amount;
+    });
+
+    return Object.values(dailyMap).sort((a, b) => {
+      // Simple sort by date string (might need better logic for multi-month)
+      return 0; 
+    });
+  }, [filteredTransactions, filteredCashEntries]);
+
+  const categoryData = useMemo(() => {
+    const catMap: { [key: string]: number } = {};
+    filteredCashEntries.filter(ce => ce.type === CashType.OUT).forEach(ce => {
+      catMap[ce.category] = (catMap[ce.category] || 0) + ce.amount;
+    });
+    return Object.entries(catMap).map(([name, value]) => ({ name, value }));
+  }, [filteredCashEntries]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,36 +193,73 @@ const Finance: React.FC<FinanceProps> = ({ cashEntries, transactions, storeSetti
              </div>
           </div>
 
-          <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
-             <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6 border-b pb-4">Rincian Laba Rugi</h3>
-             <div className="space-y-4 font-bold text-gray-800">
-                <div className="flex justify-between items-center py-2 border-b border-gray-50">
-                   <span className="text-xs uppercase">1. Pendapatan Penjualan (Net)</span>
-                   <span>{storeSettings.currencySymbol} {plData.totalSales.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-50 text-orange-600">
-                   <span className="text-xs uppercase">2. Harga Pokok Penjualan (HPP)</span>
-                   <span>({storeSettings.currencySymbol} {plData.totalHPP.toLocaleString()})</span>
-                </div>
-                <div className="flex justify-between items-center py-3 bg-gray-50 px-4 rounded-xl font-black text-blue-600">
-                   <span className="text-xs uppercase">LABA KOTOR (1 - 2)</span>
-                   <span>{storeSettings.currencySymbol} {plData.grossProfit.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-50 text-green-600">
-                   <span className="text-xs uppercase">3. Pendapatan Non-Operasional</span>
-                   <span>+{storeSettings.currencySymbol} {plData.otherIncome.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-50 text-red-500">
-                   <span className="text-xs uppercase">4. Beban / Pengeluaran Lainnya</span>
-                   <span>({storeSettings.currencySymbol} {plData.operationalExpenses.toLocaleString()})</span>
-                </div>
-                <div className="flex justify-between items-center py-5 border-t-4 border-gray-900 mt-6 text-xl font-black">
-                   <span className="uppercase">LABA BERSIH AKHIR</span>
-                   <span className={plData.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}>
-                     {storeSettings.currencySymbol} {plData.netProfit.toLocaleString()}
-                   </span>
-                </div>
-             </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
+               <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6 border-b pb-4">Rincian Laba Rugi</h3>
+               <div className="space-y-4 font-bold text-gray-800">
+                  <div className="flex justify-between items-center py-2 border-b border-gray-50">
+                     <span className="text-xs uppercase">1. Pendapatan Penjualan (Net)</span>
+                     <span>{storeSettings.currencySymbol} {plData.totalSales.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-gray-50 text-orange-600">
+                     <span className="text-xs uppercase">2. Harga Pokok Penjualan (HPP)</span>
+                     <span>({storeSettings.currencySymbol} {plData.totalHPP.toLocaleString()})</span>
+                  </div>
+                  <div className="flex justify-between items-center py-3 bg-gray-50 px-4 rounded-xl font-black text-blue-600">
+                     <span className="text-xs uppercase">LABA KOTOR (1 - 2)</span>
+                     <span>{storeSettings.currencySymbol} {plData.grossProfit.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-gray-50 text-green-600">
+                     <span className="text-xs uppercase">3. Pendapatan Non-Operasional</span>
+                     <span>+{storeSettings.currencySymbol} {plData.otherIncome.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-gray-50 text-red-500">
+                     <span className="text-xs uppercase">4. Beban / Pengeluaran Lainnya</span>
+                     <span>({storeSettings.currencySymbol} {plData.operationalExpenses.toLocaleString()})</span>
+                  </div>
+                  <div className="flex justify-between items-center py-5 border-t-4 border-gray-900 mt-6 text-xl font-black">
+                     <span className="uppercase">LABA BERSIH AKHIR</span>
+                     <span className={plData.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}>
+                       {storeSettings.currencySymbol} {plData.netProfit.toLocaleString()}
+                     </span>
+                  </div>
+               </div>
+            </div>
+
+            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col">
+              <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6 border-b pb-4">Distribusi Pengeluaran</h3>
+              <div className="flex-1 min-h-[300px]">
+                {categoryData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={categoryData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {categoryData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value: number) => `${storeSettings.currencySymbol} ${value.toLocaleString()}`}
+                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                      />
+                      <Legend verticalAlign="bottom" height={36}/>
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center opacity-20 flex-col">
+                    <span className="text-4xl mb-2">📊</span>
+                    <p className="text-[10px] font-black uppercase tracking-widest">Belum ada data pengeluaran</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -189,16 +267,29 @@ const Finance: React.FC<FinanceProps> = ({ cashEntries, transactions, storeSetti
       {activeTab === 'MUTASI' && (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div className="flex bg-gray-200 p-1 rounded-2xl">
-                {(['Harian', 'Mingguan', 'Bulanan'] as TimeFrame[]).map(tf => (
+            <div className="flex items-center gap-4">
+              <div className="flex bg-gray-200 p-1 rounded-2xl">
+                  {(['Harian', 'Mingguan', 'Bulanan'] as TimeFrame[]).map(tf => (
+                    <button 
+                      key={tf}
+                      onClick={() => setTimeFrame(tf)}
+                      className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${timeFrame === tf ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                      {tf}
+                    </button>
+                  ))}
+              </div>
+              <div className="flex bg-gray-200 p-1 rounded-2xl">
+                {(['CHART', 'TABLE'] as ViewMode[]).map(mode => (
                   <button 
-                    key={tf}
-                    onClick={() => setTimeFrame(tf)}
-                    className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${timeFrame === tf ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                    key={mode}
+                    onClick={() => setViewMode(mode)}
+                    className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${viewMode === mode ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                   >
-                    {tf}
+                    {mode === 'CHART' ? '📊 Grafik' : '📋 Tabel'}
                   </button>
                 ))}
+              </div>
             </div>
             <button
               onClick={() => setIsFormOpen(true)}
@@ -208,56 +299,108 @@ const Finance: React.FC<FinanceProps> = ({ cashEntries, transactions, storeSetti
             </button>
           </div>
 
-          <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="bg-gray-50 text-gray-400 text-[10px] uppercase font-black tracking-widest border-b border-gray-100">
-                    <th className="p-6">Waktu & Tipe</th>
-                    <th className="p-6">Kategori</th>
-                    <th className="p-6">Nominal</th>
-                    <th className="p-6">Keterangan Transaksi</th>
-                    <th className="p-6 text-right">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50 text-gray-800">
-                  {filteredCashEntries.map((e) => (
-                    <tr key={e.id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="p-6">
-                        <p className="text-[10px] font-black text-gray-400 mb-1">
-                          {new Date(e.timestamp).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
-                        </p>
-                        <span className={`text-[8px] px-3 py-1 rounded-full font-black uppercase tracking-tight ${e.type === CashType.IN ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                          {e.type}
-                        </span>
-                      </td>
-                      <td className="p-6 font-black text-xs uppercase tracking-tight">{e.category}</td>
-                      <td className={`p-6 font-black text-sm ${e.type === CashType.IN ? 'text-green-600' : 'text-red-600'}`}>
-                        {e.type === CashType.IN ? '+' : '-'} {storeSettings.currencySymbol} {e.amount.toLocaleString()}
-                      </td>
-                      <td className="p-6">
-                        <p className="text-xs text-gray-600 font-bold leading-relaxed max-w-xs">{e.note}</p>
-                        <p className="text-[8px] text-gray-400 mt-1 uppercase font-black">Dicatat oleh: {e.user}</p>
-                      </td>
-                      <td className="p-6 text-right">
-                        <button onClick={() => onDeleteEntry(e.id)} className="w-8 h-8 rounded-lg bg-red-50 text-red-300 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center mx-auto lg:ml-auto">✕</button>
-                      </td>
-                    </tr>
-                  ))}
-                  {filteredCashEntries.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="p-20 text-center">
-                        <div className="flex flex-col items-center opacity-20">
-                          <span className="text-6xl mb-4">🏦</span>
-                          <p className="font-black uppercase tracking-widest text-xs text-gray-400">Tidak ada mutasi dana pada periode ini</p>
-                        </div>
-                      </td>
-                    </tr>
+          {viewMode === 'CHART' ? (
+            <div className="grid grid-cols-1 gap-6">
+              <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
+                <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-8">Tren Arus Kas (Masuk vs Keluar)</h3>
+                <div className="h-[400px]">
+                  {chartData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={chartData}>
+                        <defs>
+                          <linearGradient id="colorIn" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                          </linearGradient>
+                          <linearGradient id="colorOut" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#ef4444" stopOpacity={0.1}/>
+                            <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis 
+                          dataKey="date" 
+                          axisLine={false} 
+                          tickLine={false} 
+                          tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }}
+                          dy={10}
+                        />
+                        <YAxis 
+                          axisLine={false} 
+                          tickLine={false} 
+                          tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }}
+                          tickFormatter={(value) => `${value / 1000}k`}
+                        />
+                        <Tooltip 
+                          contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                          formatter={(value: number) => `${storeSettings.currencySymbol} ${value.toLocaleString()}`}
+                        />
+                        <Area type="monotone" dataKey="in" name="Kas Masuk" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorIn)" />
+                        <Area type="monotone" dataKey="out" name="Kas Keluar" stroke="#ef4444" strokeWidth={3} fillOpacity={1} fill="url(#colorOut)" />
+                        <Legend verticalAlign="top" align="right" height={36} iconType="circle" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center opacity-20 flex-col">
+                      <span className="text-6xl mb-4">📈</span>
+                      <p className="font-black uppercase tracking-widest text-xs">Belum ada data mutasi untuk ditampilkan</p>
+                    </div>
                   )}
-                </tbody>
-              </table>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-gray-50 text-gray-400 text-[10px] uppercase font-black tracking-widest border-b border-gray-100">
+                      <th className="p-6">Waktu & Tipe</th>
+                      <th className="p-6">Kategori</th>
+                      <th className="p-6">Nominal</th>
+                      <th className="p-6">Keterangan Transaksi</th>
+                      <th className="p-6 text-right">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50 text-gray-800">
+                    {filteredCashEntries.map((e) => (
+                      <tr key={e.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="p-6">
+                          <p className="text-[10px] font-black text-gray-400 mb-1">
+                            {new Date(e.timestamp).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
+                          </p>
+                          <span className={`text-[8px] px-3 py-1 rounded-full font-black uppercase tracking-tight ${e.type === CashType.IN ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                            {e.type}
+                          </span>
+                        </td>
+                        <td className="p-6 font-black text-xs uppercase tracking-tight">{e.category}</td>
+                        <td className={`p-6 font-black text-sm ${e.type === CashType.IN ? 'text-green-600' : 'text-red-600'}`}>
+                          {e.type === CashType.IN ? '+' : '-'} {storeSettings.currencySymbol} {e.amount.toLocaleString()}
+                        </td>
+                        <td className="p-6">
+                          <p className="text-xs text-gray-600 font-bold leading-relaxed max-w-xs">{e.note}</p>
+                          <p className="text-[8px] text-gray-400 mt-1 uppercase font-black">Dicatat oleh: {e.user}</p>
+                        </td>
+                        <td className="p-6 text-right">
+                          <button onClick={() => onDeleteEntry(e.id)} className="w-8 h-8 rounded-lg bg-red-50 text-red-300 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center mx-auto lg:ml-auto">✕</button>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredCashEntries.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="p-20 text-center">
+                          <div className="flex flex-col items-center opacity-20">
+                            <span className="text-6xl mb-4">🏦</span>
+                            <p className="font-black uppercase tracking-widest text-xs text-gray-400">Tidak ada mutasi dana pada periode ini</p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -53,7 +53,17 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const savedUsers = localStorage.getItem('pos_users');
-    if (!savedUsers) {
+    let initialUsers: User[] = [];
+    
+    if (savedUsers) {
+      try {
+        initialUsers = JSON.parse(savedUsers);
+      } catch (e) {
+        console.error("Failed to parse users", e);
+      }
+    }
+
+    if (initialUsers.length === 0) {
       const defaultOwner: User = {
         id: 'user-owner',
         username: 'owner',
@@ -69,10 +79,11 @@ const App: React.FC = () => {
         status: EmployeeStatus.PERMANENT,
         basicSalary: 0
       };
-      setUsers([defaultOwner]);
-    } else {
-      setUsers(JSON.parse(savedUsers));
+      initialUsers = [defaultOwner];
+      localStorage.setItem('pos_users', JSON.stringify(initialUsers));
     }
+    
+    setUsers(initialUsers);
 
     const savedProducts = localStorage.getItem('pos_products');
     const savedTransactions = localStorage.getItem('pos_transactions');
@@ -92,13 +103,25 @@ const App: React.FC = () => {
     if (savedSession) setCurrentUser(JSON.parse(savedSession));
   }, []);
 
-  useEffect(() => localStorage.setItem('pos_products', JSON.stringify(products)), [products]);
-  useEffect(() => localStorage.setItem('pos_transactions', JSON.stringify(transactions)), [transactions]);
-  useEffect(() => localStorage.setItem('pos_cash_entries', JSON.stringify(cashEntries)), [cashEntries]);
-  useEffect(() => localStorage.setItem('pos_customers', JSON.stringify(customers)), [customers]);
-  useEffect(() => localStorage.setItem('pos_users', JSON.stringify(users)), [users]);
+  useEffect(() => {
+    if (products.length > 0) localStorage.setItem('pos_products', JSON.stringify(products));
+  }, [products]);
+  useEffect(() => {
+    if (transactions.length > 0) localStorage.setItem('pos_transactions', JSON.stringify(transactions));
+  }, [transactions]);
+  useEffect(() => {
+    if (cashEntries.length > 0) localStorage.setItem('pos_cash_entries', JSON.stringify(cashEntries));
+  }, [cashEntries]);
+  useEffect(() => {
+    if (customers.length > 0) localStorage.setItem('pos_customers', JSON.stringify(customers));
+  }, [customers]);
+  useEffect(() => {
+    if (users.length > 0) localStorage.setItem('pos_users', JSON.stringify(users));
+  }, [users]);
   useEffect(() => localStorage.setItem('pos_settings', JSON.stringify(storeSettings)), [storeSettings]);
-  useEffect(() => localStorage.setItem('pos_attendances', JSON.stringify(attendances)), [attendances]);
+  useEffect(() => {
+    if (attendances.length > 0) localStorage.setItem('pos_attendances', JSON.stringify(attendances));
+  }, [attendances]);
 
   const handleExportData = () => {
     const backup = { products, transactions, cashEntries, customers, users, attendances, storeSettings, exportedAt: new Date().toISOString() };

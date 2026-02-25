@@ -8,7 +8,13 @@ import {
   BarChart,
   Bar,
   XAxis,
-  YAxis
+  YAxis,
+  AreaChart,
+  Area,
+  PieChart,
+  Pie,
+  Cell,
+  Legend
 } from 'recharts';
 
 interface DashboardProps {
@@ -22,9 +28,13 @@ interface DashboardProps {
 }
 
 type TimeFrame = 'Harian' | 'Mingguan' | 'Bulanan';
+type DashboardChartType = 'BAR' | 'AREA';
+type DashboardViewMode = 'TREND' | 'DISTRIBUTION';
 
 const Dashboard: React.FC<DashboardProps> = ({ products, transactions, cashEntries, role, storeSettings, onAddCashEntry, setView }) => {
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('Harian');
+  const [chartType, setChartType] = useState<DashboardChartType>('BAR');
+  const [viewMode, setViewMode] = useState<DashboardViewMode>('TREND');
   const [showSummaryAlert, setShowSummaryAlert] = useState(false);
   const [isQuickCashOpen, setIsQuickCashOpen] = useState(false);
   const [quickCashType, setQuickCashType] = useState<CashType>(CashType.IN);
@@ -60,8 +70,20 @@ const Dashboard: React.FC<DashboardProps> = ({ products, transactions, cashEntri
 
   const chartData = useMemo(() => {
     const dataMap: Record<string, { masuk: number, keluar: number }> = {};
-    [...transactions.map(t => ({ t: t.timestamp, type: 'SALES', amount: t.totalAmount, cost: t.items.reduce((s, i) => s + (i.costPrice * i.quantity), 0) })), 
-     ...cashEntries.map(e => ({ t: e.timestamp, type: e.type, amount: e.amount, cost: 0 }))].forEach(item => {
+    
+    // Filter data based on timeframe
+    const now = new Date();
+    const filteredItems = [...transactions.map(t => ({ t: t.timestamp, type: 'SALES', amount: t.totalAmount, cost: t.items.reduce((s, i) => s + (i.costPrice * i.quantity), 0) })), 
+                           ...cashEntries.map(e => ({ t: e.timestamp, type: e.type, amount: e.amount, cost: 0 }))].filter(item => {
+      const date = new Date(item.t);
+      const diffDays = Math.ceil(Math.abs(now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+      if (timeFrame === 'Harian') return diffDays <= 1;
+      if (timeFrame === 'Mingguan') return diffDays <= 7;
+      if (timeFrame === 'Bulanan') return diffDays <= 30;
+      return true;
+    });
+
+    filteredItems.forEach(item => {
       const date = new Date(item.t);
       let key = date.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
       if (!dataMap[key]) dataMap[key] = { masuk: 0, keluar: 0 };
@@ -71,6 +93,16 @@ const Dashboard: React.FC<DashboardProps> = ({ products, transactions, cashEntri
     });
     return Object.entries(dataMap).map(([name, vals]) => ({ name, 'Kas Masuk': vals.masuk, 'Kas Keluar': vals.keluar })).slice(-10);
   }, [transactions, cashEntries, timeFrame]);
+
+  const categoryData = useMemo(() => {
+    const catMap: Record<string, number> = {};
+    cashEntries.filter(e => e.type === CashType.OUT).forEach(e => {
+      catMap[e.category] = (catMap[e.category] || 0) + e.amount;
+    });
+    return Object.entries(catMap).map(([name, value]) => ({ name, value }));
+  }, [cashEntries]);
+
+  const COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
 
   return (
     <div className="space-y-6 pb-20 text-left animate-in fade-in duration-500">
@@ -191,18 +223,88 @@ const Dashboard: React.FC<DashboardProps> = ({ products, transactions, cashEntri
       {/* Chart and Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
-          <h3 className="text-sm font-black uppercase mb-8 tracking-widest text-gray-400">Arus Kas 10 Hari Terakhir</h3>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+            <h3 className="text-sm font-black uppercase tracking-widest text-gray-400">Arus Kas ({timeFrame})</h3>
+            <div className="flex gap-2">
+              <div className="bg-gray-100 p-1 rounded-xl flex">
+                <button onClick={() => setViewMode('TREND')} className={`px-3 py-1 text-[8px] font-black uppercase rounded-lg transition-all ${viewMode === 'TREND' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400'}`}>Tren</button>
+                <button onClick={() => setViewMode('DISTRIBUTION')} className={`px-3 py-1 text-[8px] font-black uppercase rounded-lg transition-all ${viewMode === 'DISTRIBUTION' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400'}`}>Distribusi</button>
+              </div>
+              {viewMode === 'TREND' && (
+                <div className="bg-gray-100 p-1 rounded-xl flex">
+                  <button onClick={() => setChartType('BAR')} className={`px-3 py-1 text-[8px] font-black uppercase rounded-lg transition-all ${chartType === 'BAR' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400'}`}>Bar</button>
+                  <button onClick={() => setChartType('AREA')} className={`px-3 py-1 text-[8px] font-black uppercase rounded-lg transition-all ${chartType === 'AREA' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400'}`}>Area</button>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }} />
-                <Bar dataKey="Kas Masuk" fill="#22c55e" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="Kas Keluar" fill="#ef4444" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {viewMode === 'TREND' ? (
+              <ResponsiveContainer width="100%" height="100%">
+                {chartType === 'BAR' ? (
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }} />
+                    <Bar dataKey="Kas Masuk" fill="#22c55e" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="Kas Keluar" fill="#ef4444" radius={[6, 6, 0, 0]} />
+                    <Legend verticalAlign="top" align="right" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'bold' }} />
+                  </BarChart>
+                ) : (
+                  <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient id="colorMasuk" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.1}/>
+                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="colorKeluar" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.1}/>
+                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }} />
+                    <Area type="monotone" dataKey="Kas Masuk" stroke="#22c55e" fillOpacity={1} fill="url(#colorMasuk)" strokeWidth={3} />
+                    <Area type="monotone" dataKey="Kas Keluar" stroke="#ef4444" fillOpacity={1} fill="url(#colorKeluar)" strokeWidth={3} />
+                    <Legend verticalAlign="top" align="right" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'bold' }} />
+                  </AreaChart>
+                )}
+              </ResponsiveContainer>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                {categoryData.length > 0 ? (
+                  <PieChart>
+                    <Pie
+                      data={categoryData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {categoryData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value: number) => `Rp ${value.toLocaleString()}`}
+                      contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
+                    />
+                    <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 'bold' }} />
+                  </PieChart>
+                ) : (
+                  <div className="h-full flex items-center justify-center opacity-20 flex-col">
+                    <span className="text-4xl mb-2">📊</span>
+                    <p className="text-[10px] font-black uppercase tracking-widest">Belum ada data pengeluaran</p>
+                  </div>
+                )}
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
 
